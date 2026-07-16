@@ -5,6 +5,8 @@
 
 ### 🔗 Live Application
 ### **[https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/](https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/)**
+### Video Folder
+### **https://drive.google.com/drive/folders/15BRdURD27PFH-T125G9Ym9NdjtUTXvWJ?usp=drive_link**
 
 ---
 
