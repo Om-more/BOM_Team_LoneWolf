@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from agent_llm import analyze_threat
+from agent_llm import analyze_threat_agentic
 from correlation_engine import (
     ThreatCorrelationEngine,
     load_models,
@@ -54,7 +54,16 @@ def apply_firewall_action(agent_json):
         st.session_state.frozen_accounts.add(target)
 
 
-def process_next_event(event, models, engine):
+def execute_agent_action(action, target_value):
+    if not target_value:
+        return
+    if action == "BLOCK_IP":
+        st.session_state.blocked_ips.add(target_value)
+    elif action == "FREEZE_ACCOUNT":
+        st.session_state.frozen_accounts.add(target_value)
+
+
+def process_next_event(event, models, engine, events):
     transaction_id = event.get("TransactionID")
     user_id = event.get("user") or event.get("user_id")
     src_ip = event.get("src_ip")
@@ -71,6 +80,9 @@ def process_next_event(event, models, engine):
             "Threat_Tier": 0,
             "Context_Tag": "BLOCKED_BY_FIREWALL",
             "Status": "BLOCKED_IP",
+            "LLM_Action": None,
+            "MITRE_ID": None,
+            "KB_SOP": None,
         }, None
 
     if user_id in st.session_state.frozen_accounts:
@@ -85,6 +97,9 @@ def process_next_event(event, models, engine):
             "Threat_Tier": 0,
             "Context_Tag": "BLOCKED_BY_FIREWALL",
             "Status": "FROZEN_ACCOUNT",
+            "LLM_Action": None,
+            "MITRE_ID": None,
+            "KB_SOP": None,
         }, None
 
     scores = score_models(event, models)
@@ -103,6 +118,9 @@ def process_next_event(event, models, engine):
         "Threat_Tier": tier,
         "Context_Tag": tag,
         "Status": "ALLOWED",
+        "LLM_Action": None,
+        "MITRE_ID": None,
+        "KB_SOP": None,
     }
 
     agent_json = None
@@ -113,9 +131,17 @@ def process_next_event(event, models, engine):
             "Threat_Tier": tier,
             "Context_Tag": tag,
         }
-        agent_json = analyze_threat(payload, event)
+        agent_json = analyze_threat_agentic(
+            payload,
+            event,
+            events,
+            action_executor=execute_agent_action,
+        )
         apply_firewall_action(agent_json)
         st.session_state.last_alert_id = transaction_id
+        row["LLM_Action"] = f"{agent_json.get('action')} -> {agent_json.get('target_value')}"
+        row["MITRE_ID"] = agent_json.get("tactic_id")
+        row["KB_SOP"] = agent_json.get("kb_source")
 
     return row, agent_json
 
@@ -140,8 +166,9 @@ def render_agent_card(alert, newest=False):
         <div class="agent-card {flash_class}">
             <div class="agent-title">{alert['action']} -> {alert['target_value']}</div>
             <div class="agent-meta">Transaction {alert['TransactionID']} | Tier {alert['Threat_Tier']} | {alert['Context_Tag']}</div>
-            <div><b>MITRE:</b> {alert['tactics']}</div>
+            <div><b>MITRE:</b> {alert.get('tactic_id', 'N/A')} | {alert['tactics']}</div>
             <div><b>Summary:</b> {alert['explanation']}</div>
+            <div><b>KB SOP:</b> {alert.get('kb_source', 'Handle per standard triage procedure.')}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -240,7 +267,7 @@ def render_dashboard():
     if st.session_state.running and st.session_state.cursor < max_events:
         event = events[st.session_state.cursor]
         try:
-            row, agent_json = process_next_event(event, models, engine)
+            row, agent_json = process_next_event(event, models, engine, events)
             st.session_state.history.append(row)
             if agent_json:
                 st.session_state.agent_feed.insert(
@@ -291,6 +318,9 @@ def render_dashboard():
             "Threat_Tier",
             "Context_Tag",
             "Status",
+            "LLM_Action",
+            "MITRE_ID",
+            "KB_SOP",
         ]
         if history.empty:
             st.info("Press Start to begin live replay.")

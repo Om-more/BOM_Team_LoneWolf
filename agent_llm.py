@@ -31,7 +31,7 @@ Output ONLY a valid JSON object. Do not include markdown, comments, prose, or co
 The JSON object must contain exactly these keys:
 "tactics": the technique_name from the matching knowledge_base_entries entry.
 "tactic_id": the exact technique_id string from that same entry (e.g., T1078, T1020).
-"explanation": A 1-sentence executive summary of the threat, informed by the entry's description.
+"explanation": A natural 1-sentence executive summary that includes the key scores, compares their relative strength, and explains why the selected action follows from that comparison.
 "action": Must be one of "FREEZE_ACCOUNT", "BLOCK_IP", or "STEP_UP_AUTH".
 "target_value": The exact src_ip or user_id/user value to apply the action to.
 "kb_source": copy the "sop" field from the knowledge_base_entries entry you used, verbatim.
@@ -39,6 +39,7 @@ The JSON object must contain exactly these keys:
 Prefer BLOCK_IP when the cyber or quantum score is the dominant high signal.
 Prefer FREEZE_ACCOUNT when the fraud score is the dominant high signal.
 Prefer STEP_UP_AUTH when the signal is concerning but account freeze or IP block is too aggressive.
+Write like a SOC analyst briefing an executive: concise, natural, and comparative.
 """.strip()
 
 
@@ -61,6 +62,61 @@ def _coerce_action(action):
     if action not in ALLOWED_ACTIONS:
         return "STEP_UP_AUTH"
     return action
+
+
+def _score_band(score):
+    score = float(score or 0)
+    if score >= 85:
+        return "critical"
+    if score >= 70:
+        return "high"
+    if score >= 50:
+        return "moderate"
+    if score >= 30:
+        return "elevated"
+    return "low"
+
+
+def _natural_explanation(payload, tag, kb_entry):
+    fraud = float(payload.get("fraud_score") or 0)
+    cyber = float(payload.get("cyber_score") or 0)
+    quantum = float(payload.get("quantum_score") or 0)
+    scores = [
+        ("fraud", fraud),
+        ("cyber", cyber),
+        ("quantum", quantum),
+    ]
+    dominant_name, dominant_score = max(scores, key=lambda item: item[1])
+    supporting = [item for item in scores if item[0] != dominant_name and item[1] >= 70]
+    moderate = [item for item in scores if item[0] != dominant_name and 50 <= item[1] < 70]
+
+    if supporting:
+        support_text = " and is reinforced by " + " and ".join(
+            f"{name} at {score:.2f}" for name, score in supporting
+        )
+    elif moderate:
+        support_text = ", with " + " and ".join(
+            f"{name} still {_score_band(score)} at {score:.2f}" for name, score in moderate
+        )
+    else:
+        support_text = ", while the other domains remain below the high-risk threshold"
+
+    if supporting and moderate:
+        if len(moderate) == 1:
+            name, score = moderate[0]
+            support_text += f", while {name} remains {_score_band(score)} at {score:.2f}"
+        else:
+            support_text += ", while " + " and ".join(
+                f"{name} remains {_score_band(score)} at {score:.2f}"
+                for name, score in moderate
+            )
+
+    tactic = kb_entry["technique_name"] if kb_entry else "the mapped threat pattern"
+    return (
+        f"{tag} aligns with {tactic}: the {dominant_name} signal is "
+        f"{_score_band(dominant_score)} at {dominant_score:.2f}{support_text}, "
+        f"making this more credible than a single-model anomaly."
+    )
 
 
 def fallback_response(payload, raw_event):
@@ -90,10 +146,7 @@ def fallback_response(payload, raw_event):
     return {
         "tactics": tactics,
         "tactic_id": tactic_id,
-        "explanation": (
-            f"{tag} detected with fraud={fraud:.2f}, cyber={cyber:.2f}, "
-            f"and quantum={quantum:.2f}; automated containment is recommended."
-        ),
+        "explanation": _natural_explanation(payload, tag, kb_entry),
         "action": action,
         "target_value": str(target),
         "kb_source": kb_source,
@@ -137,17 +190,25 @@ def analyze_threat(payload, raw_event):
         return fallback_response(payload, raw_event)
 
 def _coerce_action_and_validate(content, payload, raw_event):
-        content = _extract_json(content)
-        parsed = json.loads(content)
-        parsed["action"] = _coerce_action(parsed.get("action"))
+    content = _extract_json(content)
+    parsed = json.loads(content)
+    tag = payload.get("Context_Tag", "")
+    kb_entries = retrieve_kb(tag)
+    kb_entry = kb_entries[0] if kb_entries else None
 
-        if "tactic_id" not in parsed:
-            parsed["tactic_id"] = "TA0040"
-        if "kb_source" not in parsed:
-            kb_entries = retrieve_kb(payload.get("Context_Tag", ""))
-            parsed["kb_source"] = kb_entries[0]["sop"] if kb_entries else "Handle per standard triage procedure."
+    parsed["action"] = _coerce_action(parsed.get("action"))
+    parsed.setdefault("tactics", kb_entry["technique_name"] if kb_entry else "N/A")
+    parsed.setdefault("tactic_id", kb_entry["technique_id"] if kb_entry else "N/A")
+    parsed.setdefault(
+        "kb_source",
+        kb_entry["sop"] if kb_entry else "Handle per standard triage procedure.",
+    )
 
-        return parsed
+    explanation = str(parsed.get("explanation") or "").strip()
+    if not explanation or "detected with fraud=" in explanation.lower():
+        parsed["explanation"] = _natural_explanation(payload, tag, kb_entry)
+
+    return {key: parsed.get(key) for key in REQUIRED_KEYS}
 
 AGENTIC_SYSTEM_PROMPT = """
 You are the agentic decision-maker for a real-time banking Security Operations Center.
@@ -169,6 +230,10 @@ execute_action to perform your decision, then respond with ONLY a final JSON obj
 (no markdown, no prose) with exactly these keys: tactics, tactic_id, explanation,
 action, target_value, kb_source. This final JSON must match what you passed to
 execute_action.
+
+The explanation must be natural analyst language: include the relevant scores, compare
+which model is dominant versus supporting or weaker signals, and explain why the action
+is justified. Avoid robotic templates like "detected with fraud=X, cyber=Y".
 """.strip()
 
 AGENTIC_TOOLS = [
