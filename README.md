@@ -1,4 +1,9 @@
 # SentinelCore — AI-Driven Correlation Engine for Cybersecurity Telemetry & Transactional Behavior
+<img width="2218" height="709" alt="image" src="https://github.com/user-attachments/assets/f941551f-1021-4298-890b-f948f4b7a719" />
+[![Python 3.x](https://img.shields.io/pypi/pyversions/datasette.svg?logo=python&logoColor=white)](https://pypi.org/project/datasette/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-Live%20Dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-Isolation%20Forest-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![Groq](https://img.shields.io/badge/Groq-Llama%203.1%208B-black)](https://groq.com/)
 
 **A real-time, multi-domain threat correlation platform for banking, fusing fraud analytics, network telemetry, and quantum-risk detection into a single autonomous SOC pipeline.**
 
