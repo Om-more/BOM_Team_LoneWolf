@@ -6,7 +6,6 @@
 ### **[https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/](https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/)**
 
 ---
-<img width="1000" height="800" alt="image" src="https://github.com/user-attachments/assets/580c3501-f0e2-40f8-a20a-33555e91b5eb" />
 
 ## Table of Contents
 1. [What This Project Is](#1-what-this-project-is)
