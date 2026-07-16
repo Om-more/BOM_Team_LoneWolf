@@ -188,7 +188,7 @@ def render_dashboard():
         """
         <style>
         .block-container {padding-top: 2.5rem; padding-bottom: 1rem;}
-        .soc-title {font-size: 1.8rem; font-weight: 750; line-height: 1.25; margin-bottom: .15rem;}
+        .soc-title {font-size: 1.8rem; font-weight: 750; margin-bottom: .15rem;}
         .soc-subtitle {color: #5f6368; margin-bottom: .9rem;}
         .agent-card {border-left: 6px solid #c62828; border-radius: 8px; padding: .75rem .85rem; margin-bottom: .7rem;}
         .agent-title {font-weight: 750;}
@@ -203,7 +203,7 @@ def render_dashboard():
         """,
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="soc-title">QTT-Shield SOC Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="soc-title">🛡️ QTT-Shield SOC Dashboard</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="soc-subtitle">Live stream scoring, agentic response, and simulated firewall enforcement.</div>',
         unsafe_allow_html=True,
@@ -213,16 +213,16 @@ def render_dashboard():
     events = cached_stream()
     engine = ThreatCorrelationEngine()
 
-    delay = 0.25
-    max_events = len(events)
+    controls = st.columns(3)
 
-    controls = st.columns([1, 1, 1])
     with controls[0]:
         if st.button("Start", use_container_width=True):
             st.session_state.running = True
+
     with controls[1]:
         if st.button("Pause", use_container_width=True):
             st.session_state.running = False
+
     with controls[2]:
         if st.button("Reset", use_container_width=True):
             st.session_state.running = False
@@ -232,6 +232,10 @@ def render_dashboard():
             st.session_state.blocked_ips = set()
             st.session_state.frozen_accounts = set()
             st.session_state.last_alert_id = None
+
+    # Fixed configuration
+    delay = 0.25
+    max_events = len(events)
 
     if st.session_state.running and st.session_state.cursor < max_events:
         event = events[st.session_state.cursor]
@@ -268,7 +272,7 @@ def render_dashboard():
         st.session_state.running = False
 
     history = pd.DataFrame(st.session_state.history)
-    metric_cols = st.columns(4)
+    metric_cols = st.columns(5)
     metric_cols[0].metric("Processed", len(st.session_state.history))
     metric_cols[1].metric("Alerts", len(st.session_state.agent_feed))
 
