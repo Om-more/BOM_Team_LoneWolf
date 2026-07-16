@@ -1,5 +1,5 @@
-# SentinelCore  AI-Driven Correlation Engine for Cybersecurity Telemetry & Transactional Behavior
-<img width="1500" height="475" alt="image" src="https://github.com/user-attachments/assets/f941551f-1021-4298-890b-f948f4b7a719" />
+# QTT-Sheild -- AI-Driven Correlation Engine for Cybersecurity Telemetry & Transactional Behavior
+<img width="2172" height="724" alt="image" src="https://github.com/user-attachments/assets/2642de1d-f8c4-4f02-aa33-ca3afa96ca64" />
 
 **A real-time, multi-domain threat correlation platform for banking, fusing fraud analytics, network telemetry, and quantum-risk detection into a single autonomous SOC pipeline.**
 
