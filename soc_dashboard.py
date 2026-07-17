@@ -230,7 +230,7 @@ def render_dashboard():
         """,
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="soc-title">🛡️ SentinelCore SOC Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="soc-title">🛡️ QTT-Shield Presents: SentinelCore SOC Dashboard</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="soc-subtitle">Live stream scoring, agentic response, and simulated firewall enforcement.</div>',
         unsafe_allow_html=True,
