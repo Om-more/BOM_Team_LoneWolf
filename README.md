@@ -3,8 +3,6 @@
 
 **A real-time, multi-domain threat correlation platform for banking, fusing fraud analytics, network telemetry, and quantum-risk detection into a single autonomous SOC pipeline.**
 
-### 🔗 Live Application
-### **[https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/](https://bomteamlonewolf-mifalxzx3acfty59fun7jk.streamlit.app/)**
 ---
 
 ## Table of Contents
